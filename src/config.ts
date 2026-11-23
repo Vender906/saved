@@ -1,5 +1,7 @@
 /**
  * Адреса власного сервісу превʼю (Cloudflare Worker з папки worker/).
- * Порожньо — застосунок працює без нього, через публічні сервіси (з обмеженнями).
+ * Можна перевизначити через змінну VITE_META_API; порожній рядок вимикає сервіс
+ * (тоді застосунок працює через публічні сервіси, з обмеженнями).
  */
-export const META_API: string = (import.meta.env.VITE_META_API as string | undefined)?.replace(/\/$/, '') ?? '';
+const fromEnv = import.meta.env.VITE_META_API as string | undefined;
+export const META_API: string = (fromEnv ?? 'https://saved-meta.vender906.workers.dev').replace(/\/$/, '');

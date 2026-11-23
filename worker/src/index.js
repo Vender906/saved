@@ -46,7 +46,7 @@ export default {
 
 /** Кешуємо відповіді на добу в кеші Cloudflare: повторні запити миттєві і не навантажують соцмережі. */
 // Збільшуй при зміні формату відповіді, щоб не віддавати старі закешовані результати
-const CACHE_VERSION = '2';
+const CACHE_VERSION = '3';
 
 async function cached(request, ctx, make) {
   const cache = caches.default;
@@ -97,10 +97,11 @@ async function meta(target, cors) {
     if (o?.title) return json({ url, title: o.title, author: o.author_name, image: o.thumbnail_url }, 200, cors);
   }
 
-  const page = await scrape(url, CRAWLER_UA);
-  let result = page;
+  let result = await scrape(url, CRAWLER_UA);
   // Деякі сайти не люблять краулерів — пробуємо як звичайний браузер
-  if (!page.title && !page.image) result = await scrape(url, BROWSER_UA);
+  if ((!result.title && !result.image) || isLoginWall(result.url)) result = await scrape(url, BROWSER_UA);
+  // Instagram та інші інколи відправляють сервери на сторінку входу: це не дані поста
+  if (isLoginWall(result.url)) return json({ error: 'login wall', url }, 502, cors);
 
   return json(refine(result, host), 200, cors);
 }
@@ -139,6 +140,10 @@ async function tiktok(url) {
   } catch {
     return null;
   }
+}
+
+function isLoginWall(url) {
+  return /\/(accounts\/login|login|signin|checkpoint)\b/i.test(new URL(url).pathname);
 }
 
 async function oembed(endpoint) {

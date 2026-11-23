@@ -94,6 +94,8 @@ async function loadMeta(url: string): Promise<Meta> {
   for (const source of sources) {
     try {
       const m = await source();
+      // Сторінка входу замість поста — не справжня адреса, не зберігаємо її
+      if (m.url && /\/(accounts\/login|login|signin|checkpoint)\b/i.test(m.url)) m.url = undefined;
       for (const k of ['url', 'title', 'description', 'image', 'author'] as const) {
         if (!result[k] && m[k]) result[k] = m[k];
       }
