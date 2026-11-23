@@ -25,7 +25,7 @@ export function Sidebar({ view, setView, tag, setTag, folders, counts, tags, onM
   return (
     <aside className="sidebar">
       <div className="side-brand">
-        <img src="/favicon.svg" alt="" width={26} height={26} />
+        <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width={26} height={26} />
         <span>Saved</span>
         <button className="icon-btn small side-close" onClick={onClose} aria-label="Сховати меню">✕</button>
       </div>

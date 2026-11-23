@@ -25,7 +25,11 @@ npm run preview   # перевірка зібраної версії (з service
 
 ## Хостинг
 
-PWA, а особливо встановлення на телефон і меню «Поділитися», працює лише через HTTPS. Підійде будь-який безкоштовний статичний хостинг: Cloudflare Pages, Netlify, Vercel. Достатньо віддати їм папку `dist/` після `npm run build`.
+Сайт викладається на **GitHub Pages** автоматично після кожного push у `main` (див. [.github/workflows/deploy.yml](.github/workflows/deploy.yml)): https://vender906.github.io/saved/
+
+Одноразове налаштування: Settings → Pages → Source: **GitHub Actions**.
+
+Підійде й будь-який інший статичний хостинг (Vercel, Netlify, Cloudflare Pages): там сайт живе в корені, тож `BASE_PATH` задавати не треба.
 
 ## Структура
 

@@ -25,7 +25,8 @@ export function SettingsDialog({ itemCount, folderCount, onClose, onMessage }: P
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null));
     // React блокує javascript: у href, тому ставимо атрибут напряму
-    const code = `javascript:location.href='${location.origin}/?url='+encodeURIComponent(location.href)`;
+    const appUrl = new URL(import.meta.env.BASE_URL, location.origin).href;
+    const code = `javascript:location.href='${appUrl}?url='+encodeURIComponent(location.href)`;
     bookmarkletRef.current?.setAttribute('href', code);
   }, []);
 
