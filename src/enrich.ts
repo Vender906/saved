@@ -1,6 +1,6 @@
 import { db, type Item } from './db';
 import { cacheThumbnail, fetchMeta } from './metadata';
-import { cleanUrl, prettyUrl } from './platforms';
+import { canonicalUrl, prettyUrl } from './platforms';
 
 /**
  * Доповнює вже збережений запис у фоні: назва, опис, автор, превʼю.
@@ -14,7 +14,7 @@ export async function enrichItem(id: string, url: string, keepTitle: boolean): P
     if (!item) return;
 
     const patch: Partial<Item> = {};
-    const canonical = meta.url ? cleanUrl(meta.url) : null;
+    const canonical = canonicalUrl(meta.url);
     if (canonical && canonical !== item.url) patch.url = canonical;
     // Назву-заглушку (адресу сторінки) замінюємо завжди, справжню — лише якщо користувач її не вписав сам
     const placeholder = !item.title || item.title === prettyUrl(item.url) || item.title === prettyUrl(url);

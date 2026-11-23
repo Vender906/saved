@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createFolder, db, moveToTrash, requestPersist, restoreFromTrash, uid, type Folder, type Item } from '../db';
 import { cacheThumbnail, fetchMeta, type Meta } from '../metadata';
 import { enrichItem } from '../enrich';
-import { cleanUrl, detectPlatform, extractUrl, PLATFORMS, prettyUrl } from '../platforms';
+import { canonicalUrl, cleanUrl, detectPlatform, extractUrl, PLATFORMS, prettyUrl } from '../platforms';
 import { Modal } from './Modal';
 import { TagInput } from './TagInput';
 import { Thumb } from './Thumb';
@@ -68,7 +68,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
           // Копію превʼю починаємо зберігати одразу, поки користувач обирає папку й теги
           if (m.image) void cacheThumbnail(m.image);
           // Коротке посилання розгорнулось — перевіряємо дубль і за справжньою адресою
-          const canonical = m.url ? cleanUrl(m.url) : null;
+          const canonical = canonicalUrl(m.url);
           if (canonical && canonical !== cleaned) {
             const dup = await db.items.where('url').equals(canonical).first();
             if (!cancelled && dup) setDuplicate(dup);
@@ -113,7 +113,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
       } else {
         // Зберігаємо одразу з тим, що вже є; превʼю й решта даних догружаються у фоні
         const id = uid();
-        const finalUrl = meta?.url ? cleanUrl(meta.url) : cleaned;
+        const finalUrl = canonicalUrl(meta?.url) ?? cleaned;
         // Якщо копія превʼю вже готова — беремо її, але не чекаємо
         const thumb = meta?.image
           ? await Promise.race([cacheThumbnail(meta.image), new Promise<undefined>((r) => setTimeout(r, 150))])

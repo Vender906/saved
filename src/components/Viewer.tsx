@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { avatarColor, db, markViewed, tagColor, type Folder, type Item } from '../db';
 import { embedFor } from '../embed';
-import { PLATFORMS, prettyUrl } from '../platforms';
+import { fetchMeta } from '../metadata';
+import { canonicalUrl, PLATFORMS, prettyUrl } from '../platforms';
 import { captionOf, mediaRatio } from './ItemCard';
 
 interface Props {
@@ -23,6 +24,24 @@ export function Viewer({ item, folder, onNext, onEdit, onClose }: Props) {
   useEffect(() => {
     void markViewed(item.id);
   }, [item.id]);
+
+  // Коротке посилання (vm.tiktok.com, /t/…) не містить номера поста — дізнаємось повну адресу
+  // і зберігаємо її, тоді плеєр зʼявиться одразу (і наступного разу теж).
+  const needsResolve = !embed && (item.platform === 'tiktok' || item.platform === 'threads' || item.platform === 'instagram');
+  useEffect(() => {
+    if (!needsResolve) return;
+    let alive = true;
+    fetchMeta(item.url)
+      .then((m) => {
+        const url = canonicalUrl(m.url);
+        if (!alive || !url) return;
+        if (url !== item.url && embedFor({ ...item, url })) void db.items.update(item.id, { url });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [needsResolve, item]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -36,6 +36,11 @@ export function embedFor(item: Item): Embed | null {
     if (!m) return null;
     return { src: `https://www.instagram.com/p/${m[2]}/embed/captioned/`, ratio: m[1].startsWith('reel') ? 16 / 9 : 1.35 };
   }
+  if (item.platform === 'threads') {
+    const m = path.match(/^\/(@[\w.]+)\/post\/([\w-]+)/);
+    if (!m) return null;
+    return { src: `https://www.threads.com/${m[1]}/post/${m[2]}/embed`, ratio: 1.45 };
+  }
   if (item.platform === 'x') {
     const id = path.match(/\/status\/(\d+)/)?.[1];
     if (!id) return null;

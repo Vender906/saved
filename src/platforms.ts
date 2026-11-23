@@ -76,6 +76,18 @@ export function cleanUrl(raw: string): string {
   }
 }
 
+/** Повна адреса поста від сервісу превʼю — або null, якщо це головна/службова сторінка. */
+export function canonicalUrl(raw: string | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.pathname.replace(/\/+$/, '') === '' || /^\/(accounts\/)?login/.test(u.pathname)) return null;
+  } catch {
+    return null;
+  }
+  return cleanUrl(raw);
+}
+
 export function youtubeId(url: string): string | null {
   try {
     const u = new URL(url);
