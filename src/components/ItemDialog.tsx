@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createFolder, db, moveToTrash, requestPersist, restoreFromTrash, uid, type Folder, type Item } from '../db';
-import { cacheThumbnail, fetchMeta, type Meta } from '../metadata';
+import { fetchMeta, type Meta } from '../metadata';
+import { enrichItem } from '../enrich';
 import { cleanUrl, detectPlatform, extractUrl, PLATFORMS, prettyUrl } from '../platforms';
 import { Modal } from './Modal';
 import { TagInput } from './TagInput';
@@ -24,6 +25,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
   const [url, setUrl] = useState(item?.url ?? initialUrl ?? '');
   const [title, setTitle] = useState(item?.title ?? '');
   const titleTouched = useRef(editing);
+  const fetchNow = useRef(!!initialUrl);
   const [meta, setMeta] = useState<Meta | null>(
     item ? { platform: item.platform, title: item.title, description: item.description, image: item.thumb ?? item.image, author: item.author } : null,
   );
@@ -51,19 +53,23 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
     }
     let cancelled = false;
     setLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const dup = await db.items.where('url').equals(cleaned).first();
-        if (cancelled) return;
-        setDuplicate(dup ?? null);
-        const m = await fetchMeta(cleaned);
-        if (cancelled) return;
-        setMeta(m);
-        if (!titleTouched.current) setTitle(m.title ?? '');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 350);
+    // Вставлене посилання вантажимо одразу, а набране вручну — після короткої паузи
+    const delay = fetchNow.current ? 0 : 400;
+    fetchNow.current = false;
+    const timer = setTimeout(() => {
+      db.items.where('url').equals(cleaned).first().then((dup) => {
+        if (!cancelled) setDuplicate(dup ?? null);
+      });
+      fetchMeta(cleaned)
+        .then((m) => {
+          if (cancelled) return;
+          setMeta(m);
+          if (!titleTouched.current) setTitle(m.title ?? '');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, delay);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -73,7 +79,10 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
   async function pasteFromClipboard() {
     try {
       const text = await navigator.clipboard.readText();
-      if (text) setUrl(extractUrl(text) ?? text);
+      if (text) {
+        fetchNow.current = true;
+        setUrl(extractUrl(text) ?? text);
+      }
     } catch {
       alert('Не вдалося прочитати буфер обміну. Встав посилання вручну.');
     }
@@ -94,14 +103,14 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
         await db.items.update(item.id, { title: finalTitle, folderId: fid, tags, note: cleanNote, updatedAt: now });
         onSaved('Зміни збережено');
       } else {
-        const thumb = meta?.image ? await cacheThumbnail(meta.image) : undefined;
+        // Зберігаємо одразу з тим, що вже є; превʼю й решта даних догружаються у фоні
+        const id = uid();
         await db.items.add({
-          id: uid(),
+          id,
           url: cleaned,
           title: finalTitle,
           description: meta?.description,
           image: meta?.image,
-          thumb,
           author: meta?.author,
           platform,
           folderId: fid,
@@ -111,6 +120,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
           updatedAt: now,
         });
         void requestPersist();
+        void enrichItem(id, cleaned, titleTouched.current && !!title.trim());
         onSaved('Збережено');
       }
     } finally {
@@ -168,6 +178,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
                 inputMode="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onPaste={() => { fetchNow.current = true; }}
                 placeholder="https://www.tiktok.com/@…"
                 autoFocus={!url}
               />

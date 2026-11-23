@@ -14,7 +14,7 @@ const GENERIC = new Set([
   'facebook', 'log in or sign up to view', 'reddit - dive into anything', 'telegram', 'pinterest',
 ]);
 
-async function getJson(url: string, ms = 8000): Promise<any> {
+async function getJson(url: string, ms = 5000): Promise<any> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -40,7 +40,7 @@ async function viaOembed(endpoint: string): Promise<Partial<Meta>> {
 }
 
 async function viaMicrolink(url: string): Promise<Partial<Meta>> {
-  const d = await getJson(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, 12000);
+  const d = await getJson(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, 7000);
   if (d?.status !== 'success') throw new Error('microlink');
   const x = d.data ?? {};
   return {
@@ -51,8 +51,23 @@ async function viaMicrolink(url: string): Promise<Partial<Meta>> {
   };
 }
 
+// Один запит на посилання за сесію: діалог і фонове доповнення після збереження ділять той самий результат
+const cache = new Map<string, Promise<Meta>>();
+
 /** Підтягує назву, превʼю та автора. Ніколи не кидає помилок: у гіршому випадку повертає лише платформу. */
-export async function fetchMeta(url: string): Promise<Meta> {
+export function fetchMeta(url: string): Promise<Meta> {
+  let p = cache.get(url);
+  if (!p) {
+    p = loadMeta(url).then((m) => {
+      if (!m.title) cache.delete(url); // невдачу можна спробувати ще раз пізніше
+      return m;
+    });
+    cache.set(url, p);
+  }
+  return p;
+}
+
+async function loadMeta(url: string): Promise<Meta> {
   const platform = detectPlatform(url);
   const result: Meta = { platform };
   const yt = platform === 'youtube' ? youtubeId(url) : null;
@@ -78,8 +93,10 @@ export async function fetchMeta(url: string): Promise<Meta> {
 
 /** Зберігає зменшену копію превʼю, якщо сайт дозволяє (CORS). Інакше лишається просто посилання. */
 export async function cacheThumbnail(src: string): Promise<string | undefined> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
   try {
-    const res = await fetch(src, { mode: 'cors' });
+    const res = await fetch(src, { mode: 'cors', signal: ctrl.signal });
     if (!res.ok) return;
     const bmp = await createImageBitmap(await res.blob());
     const scale = Math.min(1, 480 / bmp.width);
@@ -90,5 +107,7 @@ export async function cacheThumbnail(src: string): Promise<string | undefined> {
     return canvas.toDataURL('image/jpeg', 0.78);
   } catch {
     return;
+  } finally {
+    clearTimeout(timer);
   }
 }
