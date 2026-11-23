@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { avatarColor, moveToTrash, restoreFromTrash, db, tagColor, type Folder, type Item } from '../db';
+import { avatarColor, markViewed, moveToTrash, restoreFromTrash, db, tagColor, type Folder, type Item } from '../db';
 import { PLATFORMS, prettyUrl } from '../platforms';
 import { Highlight } from './Highlight';
 import { Menu, type MenuAction } from './Menu';
@@ -10,7 +10,11 @@ interface Props {
   query: string;
   onEdit: () => void;
   onTag: (tag: string) => void;
-  onMessage: (msg: string) => void;
+  onMessage: (msg: string, undo?: () => unknown) => void;
+  onOpen: () => void;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
 }
 
 const fmtDate = new Intl.DateTimeFormat('uk', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -49,7 +53,7 @@ export function estimateCard(item: Item, colWidth: number): number {
   return 58 + lines * 19 + (text.length > 160 ? 28 : 0) + (item.note ? 46 : 0) + media + 40;
 }
 
-export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Props) {
+export function ItemCard({ item, folder, query, onEdit, onTag, onMessage, onOpen, selectMode, selected, onToggleSelect }: Props) {
   const p = PLATFORMS[item.platform];
   const author = item.author || p.label;
   const caption = captionOf(item) || prettyUrl(item.url);
@@ -66,7 +70,13 @@ export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Prop
 
   const actions: MenuAction[] = item.deletedAt
     ? [
-        { label: '↩ Відновити', onClick: async () => { await restoreFromTrash(item.id); onMessage('Відновлено'); } },
+        {
+          label: '↩ Відновити',
+          onClick: async () => {
+            await restoreFromTrash(item.id);
+            onMessage('Відновлено', () => moveToTrash(item.id));
+          },
+        },
         {
           label: '✕ Видалити назавжди',
           danger: true,
@@ -76,8 +86,18 @@ export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Prop
         },
       ]
     : [
+        { label: '▶ Переглянути', onClick: onOpen },
         { label: '✎ Редагувати', onClick: onEdit },
-        { label: '↗ Відкрити', onClick: () => window.open(item.url, '_blank', 'noopener') },
+        {
+          label: '↗ Відкрити в ' + p.label,
+          onClick: () => {
+            void markViewed(item.id);
+            window.open(item.url, '_blank', 'noopener');
+          },
+        },
+        item.viewedAt
+          ? { label: '◌ Позначити непереглянутим', onClick: () => db.items.update(item.id, { viewedAt: undefined }) }
+          : { label: '✓ Позначити переглянутим', onClick: () => markViewed(item.id) },
         {
           label: '⧉ Копіювати посилання',
           onClick: async () => {
@@ -87,11 +107,31 @@ export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Prop
             } catch { /* немає доступу */ }
           },
         },
-        { label: '🗑 У кошик', danger: true, onClick: async () => { await moveToTrash(item.id); onMessage('Переміщено в кошик'); } },
+        {
+          label: '🗑 У кошик',
+          danger: true,
+          onClick: async () => {
+            await moveToTrash(item.id);
+            onMessage('Переміщено в кошик', () => restoreFromTrash(item.id));
+          },
+        },
       ];
 
   return (
-    <article className="card">
+    <article
+      className={`card ${selectMode ? 'selectable' : ''} ${selected ? 'selected' : ''}`}
+      onClickCapture={
+        selectMode
+          ? (e) => {
+              // У режимі вибору клік по картці лише вибирає її
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelect();
+            }
+          : undefined
+      }
+    >
+      {selectMode && <span className="select-check" aria-hidden>{selected ? '✓' : ''}</span>}
       <header className="card-head">
         <div className="avatar" style={{ background: avatarColor(author) }}>
           {author.replace(/^@/, '').charAt(0).toUpperCase()}
@@ -99,9 +139,12 @@ export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Prop
         </div>
         <div className="who">
           <div className="author"><Highlight text={author} query={query} /></div>
-          <div className="date">{fmtDate.format(item.createdAt)}</div>
+          <div className="date">
+            {fmtDate.format(item.createdAt)}
+            {item.viewedAt && <span className="viewed-mark" title="Переглянуто"> · ✓ переглянуто</span>}
+          </div>
         </div>
-        <Menu actions={actions} />
+        {!selectMode && <Menu actions={actions} />}
       </header>
 
       <div ref={captionRef} className={`caption ${expanded ? 'open' : ''}`}>
@@ -117,7 +160,18 @@ export function ItemCard({ item, folder, query, onEdit, onTag, onMessage }: Prop
         <div className="note"><Highlight text={item.note} query={query} /></div>
       )}
 
-      <a className="media" href={item.url} target="_blank" rel="noopener noreferrer">
+      <a
+        className="media"
+        href={item.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => {
+          // Ctrl/⌘-клік — як звичайне посилання, інакше перегляд усередині застосунку
+          if (e.ctrlKey || e.metaKey || e.shiftKey || item.deletedAt) return;
+          e.preventDefault();
+          onOpen();
+        }}
+      >
         {src && !imgFailed ? (
           <div
             className="media-box"

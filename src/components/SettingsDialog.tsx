@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { db, requestPersist, type Folder, type Item } from '../db';
 import { Modal } from './Modal';
+import { applyTheme, readPref, THEMES, writePref, type Theme } from '../prefs';
 
 interface Props {
   itemCount: number;
   folderCount: number;
   onClose: () => void;
-  onMessage: (msg: string) => void;
+  onMessage: (msg: string, undo?: () => unknown) => void;
 }
 
 interface Backup {
@@ -21,6 +22,7 @@ export function SettingsDialog({ itemCount, folderCount, onClose, onMessage }: P
   const fileRef = useRef<HTMLInputElement>(null);
   const bookmarkletRef = useRef<HTMLAnchorElement>(null);
   const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [theme, setTheme] = useState<Theme>(() => readPref('theme', 'dark', THEMES));
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null));
@@ -67,6 +69,27 @@ export function SettingsDialog({ itemCount, folderCount, onClose, onMessage }: P
 
   return (
     <Modal title="Налаштування" onClose={onClose}>
+      <section className="settings-section">
+        <h3>Тема</h3>
+        <div className="segmented wide" role="radiogroup" aria-label="Тема">
+          {THEMES.map((t) => (
+            <button
+              key={t}
+              role="radio"
+              aria-checked={theme === t}
+              className={theme === t ? 'active' : ''}
+              onClick={() => {
+                setTheme(t);
+                writePref('theme', t);
+                applyTheme(t);
+              }}
+            >
+              {t === 'dark' ? '🌙 Темна' : t === 'light' ? '☀️ Світла' : '🖥 Як у системі'}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="settings-section">
         <h3>Твої дані</h3>
         <p className="muted">

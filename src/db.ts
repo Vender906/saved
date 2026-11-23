@@ -19,6 +19,8 @@ export interface Item {
   updatedAt: number;
   /** Якщо задано — запис у кошику */
   deletedAt?: number;
+  /** Коли вперше відкрили пост (з застосунку) */
+  viewedAt?: number;
 }
 
 export interface Folder {
@@ -85,6 +87,22 @@ export async function requestPersist(): Promise<boolean> {
 export const moveToTrash = (id: string) => db.items.update(id, { deletedAt: Date.now() });
 // Dexie видаляє поле, якщо передати undefined
 export const restoreFromTrash = (id: string) => db.items.update(id, { deletedAt: undefined });
+
+export const markViewed = (id: string) =>
+  db.items.where('id').equals(id).modify((i) => {
+    if (!i.viewedAt) i.viewedAt = Date.now();
+  });
+
+/** Масові зміни. Повертають функцію «Скасувати», яка відновлює попередній стан цих записів. */
+export async function bulkPatch(ids: string[], patch: (i: Item) => Partial<Item>): Promise<() => Promise<void>> {
+  const before = await db.items.bulkGet(ids);
+  await db.transaction('rw', db.items, async () => {
+    for (const i of before) if (i) await db.items.update(i.id, patch(i));
+  });
+  return async () => {
+    await db.items.bulkPut(before.filter((i): i is Item => !!i));
+  };
+}
 
 const TAG_COLORS = ['#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6'];
 const AVATAR_COLORS = ['#7c3aed', '#db2777', '#ea580c', '#0891b2', '#16a34a', '#2563eb', '#c026d3', '#ca8a04'];

@@ -14,7 +14,7 @@ interface Props {
   folders: Folder[];
   allTags: string[];
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (message: string, undo?: () => unknown) => void;
   onOpenExisting: (item: Item) => void;
 }
 
@@ -145,7 +145,7 @@ export function ItemDialog({ item, initialUrl, defaultFolderId, folders, allTags
   async function remove() {
     if (!item) return;
     await moveToTrash(item.id);
-    onSaved('Переміщено в кошик');
+    onSaved('Переміщено в кошик', () => restoreFromTrash(item.id));
   }
 
   async function restoreDuplicate() {
