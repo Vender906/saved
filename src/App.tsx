@@ -61,6 +61,7 @@ export default function App() {
 
   const setView = (v: string) => {
     setViewRaw(v);
+    setPlatform(null); // у новій папці завжди починаємо з «Усі»
     setDrawer(false);
     window.scrollTo({ top: 0 });
   };
@@ -142,10 +143,22 @@ export default function App() {
       ),
     [source, view, folderMap],
   );
-  const usedPlatforms = useMemo(() => {
-    const s = new Set(inView.map((i) => i.platform));
-    return PLATFORM_ORDER.filter((p) => s.has(p));
-  }, [inView]);
+  // Вкладки соцмереж поточної папки з кількістю записів (з урахуванням тегу й пошуку)
+  const platformTabs = useMemo(() => {
+    const counts = new Map<Platform, number>();
+    let total = 0;
+    for (const i of inView) {
+      if ((tag && !i.tags.includes(tag)) || !matches(i, query, folderName)) continue;
+      counts.set(i.platform, (counts.get(i.platform) ?? 0) + 1);
+      total++;
+    }
+    return { total, list: PLATFORM_ORDER.filter((p) => counts.has(p)).map((p) => ({ p, n: counts.get(p)! })) };
+  }, [inView, tag, query, folderName]);
+
+  // Якщо в папці не лишилось записів вибраної соцмережі — повертаємось до «Усі»
+  useEffect(() => {
+    if (platform && !inView.some((i) => i.platform === platform)) setPlatform(null);
+  }, [platform, inView]);
 
   const filtered = useMemo(
     () =>
@@ -236,17 +249,28 @@ export default function App() {
           </div>
         </header>
 
-        {(usedPlatforms.length > 1 || tag) && (
-          <div className="chips">
+        {inView.length > 0 && (
+          <div className="tabs-row">
+            <div className="tabs" role="tablist" aria-label="Соцмережі">
+              <button role="tab" aria-selected={!platform} className={`tab ${!platform ? 'active' : ''}`} onClick={() => setPlatform(null)}>
+                Усі <span className="tab-count">{platformTabs.total}</span>
+              </button>
+              {platformTabs.list.map(({ p, n }) => (
+                <button
+                  key={p}
+                  role="tab"
+                  aria-selected={platform === p}
+                  className={`tab ${platform === p ? 'active' : ''}`}
+                  onClick={() => setPlatform(platform === p ? null : p)}
+                >
+                  <i className="dot" style={{ background: PLATFORMS[p].color }} /> {PLATFORMS[p].label}
+                  <span className="tab-count">{n}</span>
+                </button>
+              ))}
+            </div>
             {tag && (
               <button className="chip active" onClick={() => setTag(null)}>#{tag} ✕</button>
             )}
-            {usedPlatforms.length > 1 &&
-              usedPlatforms.map((p) => (
-                <button key={p} className={`chip ${platform === p ? 'active' : ''}`} onClick={() => setPlatform(platform === p ? null : p)}>
-                  <i className="dot" style={{ background: PLATFORMS[p].color }} /> {PLATFORMS[p].label}
-                </button>
-              ))}
           </div>
         )}
 
