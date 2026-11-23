@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Item } from './db';
 import { extractUrl, PLATFORM_ORDER, PLATFORMS, type Platform } from './platforms';
 import { matches } from './search';
+import { repairPending } from './enrich';
 import { ItemCard, estimateCard } from './components/ItemCard';
 import { ItemDialog } from './components/ItemDialog';
 import { FoldersDialog } from './components/FoldersDialog';
@@ -75,6 +76,12 @@ export default function App() {
     if (!parts) return;
     history.replaceState(null, '', location.pathname);
     setDialog({ type: 'add', url: extractUrl(parts) ?? parts });
+  }, []);
+
+  // Доробляємо записи, яким не встигли підтягнутись превʼю (застосунок закрили одразу після збереження)
+  useEffect(() => {
+    const t = setTimeout(() => void repairPending(), 1500);
+    return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {

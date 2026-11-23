@@ -1,0 +1,7 @@
+name = "saved-meta"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+# Сайти, яким дозволено користуватись сервісом (через кому)
+ALLOWED_ORIGINS = "https://vender906.github.io,http://localhost:5173,http://localhost:4173"
