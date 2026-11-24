@@ -27,9 +27,8 @@ export function embedFor(item: Item): Embed | null {
   if (item.platform === 'tiktok') {
     const m = path.match(/\/(video|photo)\/(\d{8,})/);
     if (!m) return null;
-    return m[1] === 'video'
-      ? { src: `https://www.tiktok.com/player/v1/${m[2]}?autoplay=1&description=1&music_info=1`, ratio: 16 / 9 }
-      : { src: `https://www.tiktok.com/embed/v2/${m[2]}`, ratio: 16 / 9 };
+    // Класичний вбудований плеєр: player/v1 на частині телефонів пише «Unable to load player»
+    return { src: `https://www.tiktok.com/embed/v2/${m[2]}?lang=uk-UA`, ratio: 16 / 9 };
   }
   if (item.platform === 'instagram') {
     const m = path.match(/^\/(p|reels?|tv)\/([\w-]+)/);
