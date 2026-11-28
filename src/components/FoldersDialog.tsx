@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { createFolder, db, deleteFolder, FOLDER_ICONS, type Folder } from '../db';
+import { createFolder, db, deleteFolder, FOLDER_ICON_GROUPS, FOLDER_ICONS, type Folder } from '../db';
 import { Modal } from './Modal';
 
 interface Props {
@@ -15,9 +15,27 @@ function IconPicker({ value, onPick }: { value: string; onPick: (icon: string) =
       <button type="button" className="icon-choice" onClick={() => setOpen((o) => !o)} aria-label="Іконка папки">{value}</button>
       {open && (
         <div className="icon-grid">
-          {FOLDER_ICONS.map((i) => (
-            <button type="button" key={i} className={i === value ? 'active' : ''} onClick={() => { onPick(i); setOpen(false); }}>{i}</button>
+          {FOLDER_ICON_GROUPS.map((g) => (
+            <div key={g.name} className="icon-group">
+              <div className="icon-group-name">{g.name}</div>
+              <div className="icon-group-list">
+                {g.icons.map((i) => (
+                  <button type="button" key={i} className={i === value ? 'active' : ''} onClick={() => { onPick(i); setOpen(false); }}>{i}</button>
+                ))}
+              </div>
+            </div>
           ))}
+          <label className="icon-custom">
+            Своє emoji:
+            <input
+              maxLength={8}
+              placeholder="🙂"
+              onChange={(e) => {
+                const v = [...new Intl.Segmenter().segment(e.target.value.trim())][0]?.segment;
+                if (v) { onPick(v); setOpen(false); }
+              }}
+            />
+          </label>
         </div>
       )}
     </div>
