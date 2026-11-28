@@ -39,7 +39,12 @@ export function Sidebar({ view, setView, tag, setTag, folders, counts, tags, onM
       <div className="side-group">
         <div className="side-title">
           <span>Папки</span>
-          <button className="icon-btn small" onClick={onManageFolders} aria-label="Керувати папками">＋</button>
+          <span className="side-title-actions">
+            {folders.length > 0 && (
+              <button className="icon-btn small" onClick={onManageFolders} aria-label="Редагувати папки" title="Змінити назви й значки">✎</button>
+            )}
+            <button className="icon-btn small" onClick={onManageFolders} aria-label="Керувати папками" title="Нова папка">＋</button>
+          </span>
         </div>
         {folders.map((f) => item(f.id, f.icon ?? '📁', f.name, counts.byFolder.get(f.id) ?? 0))}
         {folders.length === 0 && (

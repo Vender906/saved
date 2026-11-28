@@ -20,7 +20,7 @@ import { Viewer } from './components/Viewer';
 type DialogState =
   | { type: 'add'; url?: string }
   | { type: 'edit'; item: Item }
-  | { type: 'folders' }
+  | { type: 'folders'; focus?: string }
   | { type: 'settings' }
   | null;
 
@@ -321,6 +321,14 @@ export default function App() {
           <h1 className="view-title">
             <span>{viewTitle}</span>
             <span className="count-pill">{filtered.length}</span>
+            {folders.some((f) => f.id === view) && (
+              <button
+                className="icon-btn small title-edit"
+                onClick={() => setDialog({ type: 'folders', focus: view })}
+                aria-label="Змінити назву і значок папки"
+                title="Змінити назву і значок"
+              >✎</button>
+            )}
           </h1>
           <div className="search">
             <span className="search-icon" aria-hidden>⌕</span>
@@ -485,7 +493,7 @@ export default function App() {
           onOpenExisting={(item) => setDialog({ type: 'edit', item })}
         />
       )}
-      {dialog?.type === 'folders' && <FoldersDialog folders={folders} counts={counts.byFolder} onClose={closeDialog} />}
+      {dialog?.type === 'folders' && <FoldersDialog folders={folders} counts={counts.byFolder} focus={dialog.focus} onClose={closeDialog} />}
       {dialog?.type === 'settings' && (
         <SettingsDialog itemCount={active.length} folderCount={folders.length} onClose={closeDialog} onMessage={showToast} />
       )}

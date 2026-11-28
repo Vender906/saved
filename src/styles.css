@@ -316,7 +316,15 @@ textarea { resize: vertical; }
 
 .folder-list { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 6px; }
 .folder-list li { display: flex; align-items: center; gap: 8px; }
-.folder-list input { padding: 8px 10px; }
+.folder-list input { padding: 8px 30px 8px 10px; }
+.folder-list li.focused { background: var(--accent-soft); border-radius: 12px; padding: 4px; margin: 0 -4px; }
+.folder-name { position: relative; flex: 1; min-width: 0; display: block; }
+.folder-name input { width: 100%; }
+.folder-name-pen { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 13px; }
+.folder-hint { font-size: 13px; margin: 14px 0 0; }
+.folder-done { display: flex; justify-content: flex-end; margin-top: 16px; }
+.side-title-actions { display: flex; gap: 2px; }
+.title-edit { margin-left: 2px; color: var(--muted); }
 .icon-picker { position: relative; flex: none; }
 .icon-choice {
   width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
